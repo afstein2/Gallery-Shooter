@@ -25,6 +25,30 @@ class Shooter extends Phaser.Scene {
         this.myHealth = 100;    // record health as a class variable
     }
 
+
+    initGame() {
+        let my = this.my;
+
+        this.waveNumber   = 0;
+        this.enemiesAlive = 0;
+        this.myScore      = 0;
+        this.myHealth     = 100;
+
+        // Destroy any leftover zigzag enemies from the previous run
+        for (let enemy of my.sprite.zigzagEnemies) {
+            enemy.destroy();
+        }
+
+        my.sprite.zigzagEnemies = [];
+
+        // Destroy any leftover bullets
+        for (let bullet of my.sprite.bullet) {
+            bullet.destroy();
+        }
+
+        my.sprite.bullet = [];
+    }
+
     preload() {
         this.load.setPath("./assets/");
         this.load.image("spaceship", "spaceship.png");
@@ -46,11 +70,16 @@ class Shooter extends Phaser.Scene {
 
         // Sound asset from the Kenny Music Jingles pack
         // https://kenney.nl/assets/music-jingles
+        // Upon pain of 💀 do not use in your game projects. 
+        // (It's that bad)
         this.load.audio("dadada", "jingles_NES13.ogg");
     }
 
     create() {
         let my = this.my;
+
+        // Inintialize Game
+        this.initGame();
 
         my.sprite.spaceship = this.add.sprite(game.config.width/2, game.config.height - 40, "spaceship");
         my.sprite.spaceship.setScale(0.25);
@@ -66,14 +95,11 @@ class Shooter extends Phaser.Scene {
             100, 60,
         ]);
 
-        // Set wave
-        this.waveNumber = 0;
-
         // enemy2: plain sprite that homes in on the player in real time
         my.sprite.enemy2 = this.add.sprite(150, 20, "enemy");
         my.sprite.enemy2.setScale(0.25);
         my.sprite.enemy2.scorePoints = 25;
-        this.enemy2Speed = 120;   // pixels per second toward the player
+        this.enemy2Speed = 500;   // pixels per second toward the player
 
         // Notice that in this approach, we don't create any bullet sprites in create(),
         // and instead wait until we need them, based on the number of space bar presses
@@ -108,15 +134,16 @@ class Shooter extends Phaser.Scene {
         // Put score on screen
         my.text.score = this.add.bitmapText(580, 0, "rocketSquare", "Score " + this.myScore);
 
-        // Put wave number one screen
+        // Put wave number on screen
         my.text.wave = this.add.bitmapText(300, 0, "rocketSquare", "Wave " + this.waveNumber);
 
         // Put Health Percentage on screen
         my.text.health = this.add.bitmapText(10, 0, "rocketSquare", "Health " + this.myHealth + "%");
 
-
         // Kick off the first wave
         this.spawnWave();
+
+
     }
 
     update(time, delta) {
@@ -149,7 +176,7 @@ class Shooter extends Phaser.Scene {
                     "bullet"
                 );
 
-                bullet.angle = 90; // 🔄 temporary rotation
+                bullet.angle = 90; // temporary rotation
                 my.sprite.bullet.push(bullet);
             }
         }
@@ -172,13 +199,16 @@ class Shooter extends Phaser.Scene {
                 if (this.collides(enemy, bullet)) {
                     this.puff = this.add.sprite(enemy.x, enemy.y, "whitePuff03").setScale(0.25).play("puff");
                     bullet.y = -100;
+
                     enemy.stopFollow();
                     enemy.destroy();
                     this.myScore += enemy.scorePoints;
                     this.updateScore();
                     this.sound.play("dadada", { volume: 1 });
+                    
                     // Decrement alive count — if zero, start next wave
                     this.enemiesAlive--;
+                    
                     if (this.enemiesAlive <= 0) {
                         this.puff.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
                             this.spawnWave();
@@ -220,6 +250,30 @@ class Shooter extends Phaser.Scene {
             }
         }
 
+        // Check if enemy2 reaches the player (rams them)
+        if (my.sprite.enemy2.visible && this.collides(my.sprite.enemy2, my.sprite.spaceship)) {
+            this.puff = this.add.sprite(my.sprite.enemy2.x, my.sprite.enemy2.y, "whitePuff03").setScale(0.25).play("puff");
+
+            my.sprite.enemy2.visible = false;
+            my.sprite.enemy2.x = -100;
+
+            // Take health away
+            this.myHealth -= 20;
+            this.updateHealth();
+
+            // Check for game over
+            if (this.myHealth <= 0) {
+                this.scene.start("gameOverScene");
+            }
+
+            // Respawn enemy2 at a random top position after puff
+            this.puff.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                this.my.sprite.enemy2.x = Phaser.Math.Between(50, game.config.width - 50);
+                this.my.sprite.enemy2.y = 20;
+                this.my.sprite.enemy2.visible = true;
+            }, this);
+        }
+
         // Make all of the bullets move
         for (let bullet of my.sprite.bullet) {
             bullet.y -= this.bulletSpeed * dt;
@@ -252,10 +306,7 @@ class Shooter extends Phaser.Scene {
     spawnWave() {
         let my = this.my;
         this.waveNumber++;
-        
-        console.log("Wave ", this.waveNumber);
-
-        my.text.wave.setText("Wave " + this.waveNumber);
+        this.my.text.wave.setText("Wave " + this.waveNumber);
 
         // Wave 1 = 2 enemies, wave 2 = 3, wave 3 = 4, etc.
         const count = 1 + this.waveNumber;
