@@ -394,7 +394,7 @@ class Shooter extends Phaser.Scene {
         this.waveNumber++;
 
         // Every 2 waves, add one more enemy2
-        this.syncEnemy2Count();
+        this.spawnEnemy2();
 
         // Build randomized zig-zag path
         this.buildZigzagPath();
@@ -410,25 +410,25 @@ class Shooter extends Phaser.Scene {
         this.startEnemyFireTimer();
     }
 
-    syncEnemy2Count() {
+    // Spawns one new enemy2 at a random top position
+    spawnEnemy2() {
         let my = this.my;
         let expectedEnemy2Count = 1 + Math.floor((this.waveNumber - 1) / 2);
+
+        // If we don't have enough enemy2 sprites, create them
         while (my.sprite.enemy2.length < expectedEnemy2Count) {
-            this.spawnEnemy2();
+            let e2 = this.add.sprite(
+                Phaser.Math.Between(50, game.config.width - 50),
+                20,
+                "enemy2"
+            );
+
+            e2.setScale(0.25);
+            e2.scorePoints = 25;
+            this.my.sprite.enemy2.push(e2);
         }
     }
 
-    // Spawns one new enemy2 at a random top position
-    spawnEnemy2() {
-        let e2 = this.add.sprite(
-            Phaser.Math.Between(50, game.config.width - 50),
-            20,
-            "enemy2"
-        );
-        e2.setScale(0.25);
-        e2.scorePoints = 25;
-        this.my.sprite.enemy2.push(e2);
-    }
 
     buildZigzagPath() {
         const points = [];
