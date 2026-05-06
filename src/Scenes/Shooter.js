@@ -16,6 +16,8 @@ class Shooter extends Phaser.Scene {
         this.my.sprite.enemyBullets = [];    // bullets fired by zigzag enemies
         this.maxBullets = 10;           // Don't create more than this many bullets
 
+        this.my.sprite.enemy2 = [];
+
         this.waveNumber   = 0;   // incremented before each spawn, so wave 1 starts with 2 enemies
         this.enemiesAlive = 0;   // decremented on each kill; hits 0 = next wave
         
@@ -99,9 +101,9 @@ class Shooter extends Phaser.Scene {
         ]);
 
         // enemy2: plain sprite that homes in on the player in real time
-        my.sprite.enemy2 = this.add.sprite(150, 20, "enemy2");
-        my.sprite.enemy2.setScale(0.25);
-        my.sprite.enemy2.scorePoints = 25;
+        // my.sprite.enemy2 = this.add.sprite(150, 20, "enemy2");
+        // my.sprite.enemy2.setScale(0.25);
+        // my.sprite.enemy2.scorePoints = 25;
         this.enemy2Speed = 120;   // pixels per second toward the player
 
         // Notice that in this approach, we don't create any bullet sprites in create(),
@@ -147,6 +149,19 @@ class Shooter extends Phaser.Scene {
         // Kick off the first wave
         this.spawnWave();
 
+    }
+
+
+    // Spawns one new enemy2 at a random top position
+    spawnEnemy2() {
+        let e2 = this.add.sprite(
+            Phaser.Math.Between(50, game.config.width - 50),
+            20,
+            "enemy2"
+        );
+        e2.setScale(0.25);
+        e2.scorePoints = 25;
+        this.my.sprite.enemy2.push(e2);
     }
 
     update(time, delta) {
@@ -220,67 +235,67 @@ class Shooter extends Phaser.Scene {
             return true;
         });
 
-        // Check for collision with enemy2
-        for (let bullet of my.sprite.bullet) {
-            if (this.collides(my.sprite.enemy2, bullet)) {
-                this.puff = this.add.sprite(my.sprite.enemy2.x, my.sprite.enemy2.y, "whitePuff03").setScale(0.25).play("puff");
-                bullet.y = -100;
-                my.sprite.enemy2.visible = false;
-                my.sprite.enemy2.x = -100;
-                this.myScore += my.sprite.enemy2.scorePoints;
-                this.updateScore();
-                this.sound.play("dadada", { volume: 1 });
-                // Respawn at a random top position after the puff finishes
-                this.puff.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-                    this.my.sprite.enemy2.x = Phaser.Math.Between(50, game.config.width - 50);
-                    this.my.sprite.enemy2.y = 20;
-                    this.my.sprite.enemy2.visible = true;
-                }, this);
-            }
-        }
+        // enemy2: homing, bullet collision, ram collision
+        my.sprite.enemy2 = my.sprite.enemy2.filter(e2 => {
+            if (!e2.visible) return true;
 
-        // enemy2 homes toward the player in real time
-        if (my.sprite.enemy2.visible) {
-            let dx = my.sprite.spaceship.x - my.sprite.enemy2.x;
-            let dy = my.sprite.spaceship.y - my.sprite.enemy2.y;
+            // Check player bullet hits
+            for (let bullet of my.sprite.bullet) {
+                if (this.collides(e2, bullet)) {
+                    this.puff = this.add.sprite(e2.x, e2.y, "whitePuff03").setScale(0.25).play("puff");
+                    bullet.y = -100;
+                    e2.visible = false;
+                    e2.x = -100;
+                    this.myScore += e2.scorePoints;
+                    this.updateScore();
+                    this.sound.play("dadada", { volume: 1 });
+                    this.puff.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                        e2.x = Phaser.Math.Between(50, game.config.width - 50);
+                        e2.y = 20;
+                        e2.visible = true;
+                    }, this);
+                    return true;
+                }
+            }
+
+            // Home toward player
+            let dx = my.sprite.spaceship.x - e2.x;
+            let dy = my.sprite.spaceship.y - e2.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 1) {
-                my.sprite.enemy2.x += (dx / dist) * this.enemy2Speed * dt;
-                my.sprite.enemy2.y += (dy / dist) * this.enemy2Speed * dt;
+                e2.x += (dx / dist) * this.enemy2Speed * dt;
+                e2.y += (dy / dist) * this.enemy2Speed * dt;
             }
-        }
 
-        // Check if enemy2 reaches the player (rams them)
-        if (my.sprite.enemy2.visible && this.collides(my.sprite.enemy2, my.sprite.spaceship)) {
-            this.puff = this.add.sprite(my.sprite.enemy2.x, my.sprite.enemy2.y, "whitePuff03").setScale(0.25).play("puff");
-            my.sprite.enemy2.visible = false;
-            my.sprite.enemy2.x = -100;
-            // Take health away
-            this.myHealth -= 20;
-            this.updateHealth();
-            // Check for game over
-            if (this.myHealth <= 0) {
-                this.scene.start("gameOverScene");
+            // Ram the player
+            if (this.collides(e2, my.sprite.spaceship)) {
+                this.puff = this.add.sprite(e2.x, e2.y, "whitePuff03").setScale(0.25).play("puff");
+                e2.visible = false;
+                e2.x = -100;
+                this.myHealth -= 20;
+                this.updateHealth();
+                if (this.myHealth <= 0) {
+                    this.scene.start("gameOverScene");
+                }
+                this.puff.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                    e2.x = Phaser.Math.Between(50, game.config.width - 50);
+                    e2.y = 20;
+                    e2.visible = true;
+                }, this);
             }
-            // Respawn enemy2 at a random top position after puff
-            this.puff.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-                this.my.sprite.enemy2.x = Phaser.Math.Between(50, game.config.width - 50);
-                this.my.sprite.enemy2.y = 20;
-                this.my.sprite.enemy2.visible = true;
-            }, this);
-        }
+
+            return true;
+        });
 
         // Move enemy bullets downward and check collision with player
         my.sprite.enemyBullets = my.sprite.enemyBullets.filter(eb => {
-            eb.y += 250 * dt;   // enemy bullet speed downward
+            eb.y += 250 * dt;
 
-            // Reap if offscreen
             if (eb.y > game.config.height + eb.displayHeight) {
                 eb.destroy();
                 return false;
             }
 
-            // Hit the player
             if (this.collides(eb, my.sprite.spaceship)) {
                 eb.destroy();
                 this.myHealth -= 10;
@@ -294,7 +309,7 @@ class Shooter extends Phaser.Scene {
             return true;
         });
 
-        // Make all of the bullets move
+        // Move all player bullets
         for (let bullet of my.sprite.bullet) {
             bullet.y -= this.bulletSpeed * dt;
         }
@@ -307,18 +322,21 @@ class Shooter extends Phaser.Scene {
 
     // A center-radius AABB collision check
     collides(a, b) {
+        
         if (Math.abs(a.x - b.x) > (a.displayWidth/2 + b.displayWidth/2)) return false;
         if (Math.abs(a.y - b.y) > (a.displayHeight/2 + b.displayHeight/2)) return false;
         return true;
     }
 
     updateScore() {
+
         let my = this.my;
         my.text.score.setText("Score " + this.myScore);
        
     }
 
     updateHealth() {
+
         let my = this.my;
         my.text.health.setText("Health " + this.myHealth + "%");
     }
@@ -327,26 +345,33 @@ class Shooter extends Phaser.Scene {
         let my = this.my;
         this.waveNumber++;
 
-        // Build a fresh randomized zig-zag path each wave.
-        // Points alternate between left zone (50-300) and right zone (500-750),
-        // with y values spread across the upper third of the screen (40-200).
+        // Every 2 waves, add one more enemy2
+        let expectedEnemy2Count = 1 + Math.floor((this.waveNumber - 1) / 2);
+        while (my.sprite.enemy2.length < expectedEnemy2Count) {
+            this.spawnEnemy2();
+        }
+
+        // Build randomized zig-zag path
         const points = [];
         for (let i = 0; i < 6; i++) {
-            const x = i % 2 === 0
-                ? Phaser.Math.Between(50, 300)    // left side
-                : Phaser.Math.Between(500, 750);  // right side
+            let x;
+            if (i % 2 === 0) {
+                x = Phaser.Math.Between(50, 300);
+            } else {
+                x = Phaser.Math.Between(500, 750);
+            }
             const y = Phaser.Math.Between(40, 200);
             points.push(x, y);
         }
-        this.enemyPath = new Phaser.Curves.Spline(points);
-        this.my.text.wave.setText("Wave " + this.waveNumber);
 
-        // Wave 1 = 2 enemies, wave 2 = 3, wave 3 = 4, etc.
+        this.enemyPath = new Phaser.Curves.Spline(points);
+        my.text.wave.setText("Wave " + this.waveNumber);
+
+        // Wave 1 = 2 enemies, wave 2 = 3, etc.
         const count = 1 + this.waveNumber;
 
-        // Spread start offsets evenly around the path so enemies don't stack
         for (let i = 0; i < count; i++) {
-            const startAt = i / count;   // e.g. 3 enemies → 0, 0.33, 0.66
+            const startAt = i / count;
             let enemy = this.add.follower(this.enemyPath, 100, 150, "enemy");
             enemy.setScale(0.25);
             enemy.scorePoints = 25;
@@ -361,26 +386,22 @@ class Shooter extends Phaser.Scene {
 
         this.enemiesAlive = count;
 
-        // Fire a bullet from a random zigzag enemy every 2 seconds
+        // Enemy shooting timer
         if (this.enemyFireTimer) this.enemyFireTimer.remove();
-            this.enemyFireTimer = this.time.addEvent({
-                delay: 800,          // fire more often
-                loop: true,
-                callback: () => {
-                    let alive = this.my.sprite.zigzagEnemies;
-                    if (alive.length === 0) return;
-
-                    // Fire from ALL enemies each tick, or pick multiple
-                    for (let shooter of alive) {
-                        // Stagger so not every enemy fires every tick
-                        if (Phaser.Math.Between(0, 1) === 0) {
-                            let eb = this.add.sprite(shooter.x, shooter.y, "bullet");
-                            eb.setScale(0.2);
-                            this.my.sprite.enemyBullets.push(eb);
-                        }
+        this.enemyFireTimer = this.time.addEvent({
+            delay: 800,
+            loop: true,
+            callback: () => {
+                let alive = this.my.sprite.zigzagEnemies;
+                if (alive.length === 0) return;
+                for (let shooter of alive) {
+                    if (Phaser.Math.Between(0, 1) === 0) {
+                        let eb = this.add.sprite(shooter.x, shooter.y, "bullet");
+                        eb.setScale(0.2);
+                        this.my.sprite.enemyBullets.push(eb);
                     }
                 }
-            });
+            }
+        });
     }
-
 }
