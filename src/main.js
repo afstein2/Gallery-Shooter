@@ -1,14 +1,3 @@
-// Jim Whitehead
-// Created: 4/14/2024
-// Phaser: 3.70.0
-//
-// BuildAMonster
-//
-// A template for building a monster using a series of assets from
-// a sprite atlas.
-// 
-// Art assets from Kenny Assets "Monster Builder Pack" set:
-// https://kenney.nl/assets/monster-builder-pack
 
 "use strict"
 
