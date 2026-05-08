@@ -21,7 +21,7 @@ let config = {
     },
     width: 800,
     height: 600,
-    scene: [StartScreen, Shooter, GameOver]
+    scene: [StartScreen, Shooter, GameOver, Controls, Credits]
 }
 
 const game = new Phaser.Game(config);

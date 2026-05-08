@@ -148,8 +148,11 @@ class Shooter extends Phaser.Scene {
         // Move all player bullets
         this.movePlayerBullets(dt);
 
+        // Next scene (for testing)
         if (Phaser.Input.Keyboard.JustDown(this.nextScene)) {
-            this.scene.start("singleBullet");
+            this.scene.start("controlsScene", {
+                score: this.myScore
+            });
         }
     }
 
@@ -205,13 +208,13 @@ class Shooter extends Phaser.Scene {
         let my = this.my;
 
         // Put score on screen
-        my.text.score  = this.add.bitmapText(580, 0, "rocketSquare", "Score "  + this.myScore);
+        my.text.score  = this.add.bitmapText(625, 0, "rocketSquare", "Score "  + this.myScore);
 
         // Put wave number on screen
-        my.text.wave   = this.add.bitmapText(300, 0, "rocketSquare", "Wave "   + this.waveNumber);
+        my.text.wave   = this.add.bitmapText(375, 0, "rocketSquare", "Wave "   + this.waveNumber);
 
         // Put Health Percentage on screen
-        my.text.health = this.add.bitmapText( 10, 0, "rocketSquare", "Health " + this.myHealth + "%");
+        my.text.health = this.add.bitmapText(10, 0, "rocketSquare", "Health " + this.myHealth + "%");
     }
 
 
@@ -510,7 +513,11 @@ class Shooter extends Phaser.Scene {
         this.myHealth -= amount;
         this.my.text.health.setText("Health " + this.myHealth + "%");
         if (this.myHealth <= 0) {
-            this.scene.start("gameOverScene");
+
+            // Game Over Scene with score data passed in
+            this.scene.start("gameOverScene", {
+                score: this.myScore
+            });
         }
     }
 

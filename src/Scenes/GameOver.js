@@ -1,17 +1,57 @@
 class GameOver extends Phaser.Scene {
+
     constructor() {
         super("gameOverScene");
     }
 
-    create() {
-        // Gamer Over text
-        this.add.text(game.config.width / 2, game.config.height / 2, "Game Over", {
-            font: "64px Arial",
-            fill: "#ff4444"
-        }).setOrigin(0.5);
+    init(data) {
+        this.finalScore = data.score || 0;
 
-        // After delay, go back to the start screen
-        this.time.delayedCall(2000, () => {
+        // Get high score from local storage
+        this.highScore = localStorage.getItem("highScore") || 0;
+
+        // Convert string to number
+        this.highScore = Number(this.highScore);
+
+        // Update high score if player beat it
+        if (this.finalScore > this.highScore) {
+            this.highScore = this.finalScore;
+
+            localStorage.setItem("highScore", this.highScore);
+        }
+    }
+
+    create() {
+
+        // Game Over title
+        this.add.bitmapText(
+            game.config.width / 2 - 120,
+            game.config.height / 2 - 80,
+            "rocketSquare",
+            "GAME OVER",
+            32
+        );
+
+        // Final score
+        this.add.bitmapText(
+            game.config.width / 2 - 120,
+            game.config.height / 2,
+            "rocketSquare",
+            "Score: " + this.finalScore,
+            24
+        );
+
+        // High score
+        this.add.bitmapText(
+            game.config.width / 2 - 120,
+            game.config.height / 2 + 40,
+            "rocketSquare",
+            "High Score: " + this.highScore,
+            24
+        );
+
+        // Return to start screen after delay
+        this.time.delayedCall(5000, () => {
             this.scene.start("startScreenScene");
         });
     }
